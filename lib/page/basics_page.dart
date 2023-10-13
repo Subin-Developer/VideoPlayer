@@ -20,7 +20,7 @@ class BasicsPage extends StatelessWidget {
       );
 
 
-  Widget buildFiles() => FilePlayerWidget();
+  Widget buildFiles() =>  FilePlayerWidget();
 
   Widget buildNetwork() => NetworkPlayerWidget();
 }

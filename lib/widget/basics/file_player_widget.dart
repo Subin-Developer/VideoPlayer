@@ -7,25 +7,33 @@ import 'package:videoplayer/widget/other/floating_action_button_widget.dart';
 import 'package:videoplayer/widget/video_player_widget.dart';
 
 class FilePlayerWidget extends StatefulWidget {
+  const FilePlayerWidget({Key? key}) : super(key: key);
+
   @override
   _FilePlayerWidgetState createState() => _FilePlayerWidgetState();
 }
 
 class _FilePlayerWidgetState extends State<FilePlayerWidget> {
-  final File file = File(
-      '/data/user/0/com.example.video_example/cache/file_picker/big_buck_bunny_720p_10mb.mp4');
-   late VideoPlayerController controller;
+  late File file;
+  late VideoPlayerController controller;
+  bool isVideoInitialized = false;
 
   @override
   void initState() {
     super.initState();
+    file = File('/data/user/0/com.example.video_example/cache/file_picker/big_buck_bunny_720p_10mb.mp4');
+    controller = VideoPlayerController.file(file);
 
-    if (file.existsSync()) {
-      controller = VideoPlayerController.file(file)
-        ..addListener(() => setState(() {}))
-        ..setLooping(true)
-        ..initialize().then((_) => controller.play());
-    }
+    controller.addListener(() {
+      setState(() {});
+    });
+
+    controller.setLooping(true);
+    controller.initialize().then((_) {
+      setState(() {
+        isVideoInitialized = true;
+      });
+    });
   }
 
   @override
@@ -35,40 +43,55 @@ class _FilePlayerWidgetState extends State<FilePlayerWidget> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: Column(
-          children: [
-            VideoPlayerWidget(controller: controller),
-            buildAddButton(),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          if (isVideoInitialized) VideoPlayerWidget(controller: controller),
+          buildAddButton(),
+        ],
+      ),
+    );
+  }
 
-  Widget buildAddButton() => Container(
-        padding: EdgeInsets.all(32),
-        child: FloatingActionButtonWidget(
-          onPressed: () async {
-            final file = await pickVideoFile();
-            if (file == null) return;
+  Widget buildAddButton() {
+    return Container(
+      padding: EdgeInsets.all(32),
+      child: FloatingActionButtonWidget(
+        onPressed: () async {
+          final selectedFile = await pickVideoFile();
+          if (selectedFile == null) return;
 
-            controller = VideoPlayerController.file(file)
-              ..addListener(() => setState(() {}))
-              ..setLooping(true)
-              ..initialize().then((_) {
-                controller.play();
-                setState(() {});
+          if (controller.value.isInitialized) {
+            await controller.pause();
+          }
+
+          setState(() {
+            file = selectedFile;
+            controller = VideoPlayerController.file(file);
+            controller.addListener(() {
+              setState(() {});
+            });
+            controller.setLooping(true);
+            controller.initialize().then((_) {
+              controller.play();
+              setState(() {
+                isVideoInitialized = true;
               });
-          },
-        ),
-      );
+            });
+          });
+        },
+      ),
+    );
+  }
 
-Future<File?> pickVideoFile() async {
-  final result = await FilePicker.platform.pickFiles(type: FileType.video);
-  if (result == null) return null;
+  Future<File?> pickVideoFile() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.video);
+    if (result == null) return null;
 
-  final path = result.files.single.path;
-  if (path == null) return null;
+    final path = result.files.single.path;
+    if (path == null) return null;
 
-  return File(path);
-}
+    return File(path);
+  }
 }
